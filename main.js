@@ -33,12 +33,31 @@ let userData = {
 // Load course structure from JSON
 async function loadCourseStructure() {
     try {
+        console.log('Loading course structure...');
         const response = await fetch('course-structure.json');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         courseStructure = await response.json();
-        console.log('Course structure loaded:', courseStructure);
+        console.log('Course structure loaded successfully from JSON:', courseStructure);
+        console.log('First beginner module from JSON:', courseStructure.beginner?.[0]);
+        console.log('First intermediate module from JSON:', courseStructure.intermediate?.[0]);
+        
+        // Verify the structure
+        if (courseStructure.beginner && courseStructure.intermediate) {
+            console.log('Beginner modules:', courseStructure.beginner.length);
+            console.log('Intermediate modules:', courseStructure.intermediate.length);
+        } else {
+            console.warn('Course structure missing beginner or intermediate tracks');
+        }
+        
     } catch (error) {
         console.error('Error loading course structure:', error);
+        console.log('USING FALLBACK COURSE STRUCTURE - JSON failed to load');
         // Fallback to default structure if JSON fails to load
+        console.log('Using fallback course structure');
         courseStructure = {
             beginner: [
                 { id: "welcome-beginner", title: "Welcome to AI Fundamentals", objective: "Introduce beginners to AI" },
@@ -47,19 +66,19 @@ async function loadCourseStructure() {
                 { id: "agentive-ai-basics", title: "Agentive AI Basics", objective: "Learn about agentive AI" },
                 { id: "codex-introduction", title: "Meet Codex AI", objective: "Discover Codex capabilities" },
                 { id: "codex-demo", title: "Codex Demo", objective: "Experience Codex in action" },
-                { id: "reflection", title: "Course Reflection", objective: "Complete the course" },
-                { id: "escape-room", title: "AI Knowledge Challenge", objective: "Test understanding" } // Added missing module
+                { id: "escape-room", title: "AI Knowledge Challenge", objective: "Test understanding" }
             ],
             intermediate: [
                 { id: "welcome-intermediate", title: "Advanced AI Deep Dive", objective: "Advanced AI concepts" },
                 { id: "ai-industry-cases", title: "AI in Industry", objective: "Real-world applications" },
                 { id: "generative-ai-advanced", title: "Advanced Generative AI", objective: "Enterprise applications" },
                 { id: "agentive-ai-deep-dive", title: "Agentive AI Deep Dive", objective: "Technical architecture" },
-                { id: "github-copilot-deep-dive", title: "GitHub Copilot Professional", objective: "Professional development" },
                 { id: "codex-advanced", title: "Advanced Codex", objective: "Production usage" },
-                { id: "ai-strategy-case-study", title: "AI Strategy Case Study", objective: "Implementation strategies" }
+                { id: "ai-strategy-case-study", title: "AI Strategy Case Study", objective: "Implementation strategies" },
+                { id: "escape-room", title: "AI Knowledge Challenge", objective: "Test understanding" }
             ]
         };
+        console.log('Fallback structure loaded:', courseStructure);
     }
 }
 
@@ -79,16 +98,46 @@ function determineProficiencyLevel() {
     if (correctAnswers <= 4 || (advancedQuestions <= 1 && intermediateQuestions <= 2)) {
         userData.proficiencyLevel = 'beginner';
         console.log('Assigned to BEGINNER course');
-        shuffledPosttestQuestions = shuffledBeginnerPosttest; // ← ADD THIS
+        shuffledPosttestQuestions = shuffledBeginnerPosttest;
     } else {
         userData.proficiencyLevel = 'intermediate'; 
         console.log('Assigned to INTERMEDIATE course');
-        shuffledPosttestQuestions = shuffledIntermediatePosttest; // ← ADD THIS
+        shuffledPosttestQuestions = shuffledIntermediatePosttest;
+    }
+    
+    // Ensure courseStructure is available
+    if (!courseStructure || !courseStructure[userData.proficiencyLevel]) {
+        console.error('Course structure not available, using fallback');
+        if (!courseStructure) {
+            courseStructure = {
+                beginner: [
+                    { id: "welcome-beginner", title: "Welcome to AI Fundamentals", objective: "Introduce beginners to AI" },
+                    { id: "what-is-ai", title: "What is AI?", objective: "Learn AI basics" },
+                    { id: "generative-ai-intro", title: "Generative AI Intro", objective: "Understand generative AI" },
+                    { id: "agentive-ai-basics", title: "Agentive AI Basics", objective: "Learn about agentive AI" },
+                    { id: "codex-introduction", title: "Meet Codex AI", objective: "Discover Codex capabilities" },
+                    { id: "codex-demo", title: "Codex Demo", objective: "Experience Codex in action" },
+                    { id: "escape-room", title: "AI Knowledge Challenge", objective: "Test understanding" }
+                ],
+                intermediate: [
+                    { id: "welcome-intermediate", title: "Advanced AI Deep Dive", objective: "Advanced AI concepts" },
+                    { id: "ai-industry-cases", title: "AI in Industry", objective: "Real-world applications" },
+                    { id: "generative-ai-advanced", title: "Advanced Generative AI", objective: "Enterprise applications" },
+                    { id: "agentive-ai-deep-dive", title: "Agentive AI Deep Dive", objective: "Technical architecture" },
+                    { id: "codex-advanced", title: "Advanced Codex", objective: "Production usage" },
+                    { id: "ai-strategy-case-study", title: "AI Strategy Case Study", objective: "Implementation strategies" },
+                    { id: "escape-room", title: "AI Knowledge Challenge", objective: "Test understanding" }
+                ]
+            };
+        }
     }
     
     // Set the current course based on proficiency
     currentCourse = courseStructure[userData.proficiencyLevel];
     userData.coursePath = userData.proficiencyLevel;
+    
+    console.log('Current course set:', currentCourse);
+    console.log('Current course length:', currentCourse ? currentCourse.length : 'undefined');
 }
 
 // Initialize course when page loads
@@ -1177,7 +1226,7 @@ function showPretestQuestion() {
 }
 
 // Add this function to handle pretest answers
-function selectPretestAnswer(selectedIndex) {
+window.selectPretestAnswer = function(selectedIndex) {
     const question = shuffledPretestQuestions[currentQuestionIndex];
     const isCorrect = selectedIndex === question.answer;
     
@@ -1199,7 +1248,7 @@ function selectPretestAnswer(selectedIndex) {
     setTimeout(() => {
         showPretestQuestion();
     }, 500);
-}
+};
 
 // Add this function to complete pretest assessment
 function completePretestAssessment() {
@@ -1229,15 +1278,41 @@ function completePretestAssessment() {
 // Add this function to start course modules
 function startCourseModules() {
     console.log('Starting course modules...');
+    console.log('Current course before starting:', currentCourse);
+    console.log('Course structure:', courseStructure);
+    
+    // Ensure we have a valid course
+    if (!currentCourse || currentCourse.length === 0) {
+        console.error('No course assigned! Trying to assign again...');
+        determineProficiencyLevel();
+        
+        if (!currentCourse || currentCourse.length === 0) {
+            console.error('Still no course! Using fallback.');
+            currentCourse = courseStructure.beginner || [];
+        }
+    }
+    
+    console.log('Final current course:', currentCourse);
     
     // Hide pretest section
-    document.getElementById('pretest-section').style.display = 'none';
+    const pretestSection = document.getElementById('pretest-section');
+    if (pretestSection) {
+        pretestSection.style.display = 'none';
+        console.log('Pretest section hidden');
+    }
     
     // Show course section
-    document.getElementById('course-section').style.display = 'block';
+    const courseSection = document.getElementById('course-section');
+    if (courseSection) {
+        courseSection.style.display = 'block';
+        console.log('Course section shown');
+    } else {
+        console.error('Course section not found!');
+    }
     
     // Initialize and show first module
-    window.currentModule = 0;
+    currentModule = 0;
+    console.log('Starting module:', currentModule);
     showModule();
 }
 
@@ -1826,20 +1901,6 @@ function endTimer() {
     moduleEnd = Date.now();
     const timeSpent = Math.round((moduleEnd - moduleStart) / 1000);
     userData.timeSpent = (userData.timeSpent || 0) + timeSpent;
-}
-
-function updateProgress() {
-    const progressBar = document.getElementById('progress-bar');
-    if (!progressBar) {
-        console.error('Progress bar element not found');
-        return;
-    }
-    
-    const total = shuffledPretestQuestions.length + (currentCourse ? currentCourse.length : 7) + shuffledPosttestQuestions.length;
-    const completed = userData.pretest.length + userData.moduleProgress.length + userData.posttest.length;
-    const percentage = Math.round((completed / total) * 100);
-    
-    progressBar.style.width = percentage + '%';
 }
 
 function updateProgress() {
